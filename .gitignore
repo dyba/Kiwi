@@ -15,3 +15,6 @@ output
 
 # AppCode files
 .idea
+
+# CocoaPods files
+Pods/

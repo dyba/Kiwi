@@ -14,15 +14,29 @@
 
 @implementation KWAsyncVerifier
 
-+ (id)asyncVerifierWithExpectationType:(KWExpectationType)anExpectationType callSite:(KWCallSite *)aCallSite matcherFactory:(KWMatcherFactory *)aMatcherFactory reporter:(id<KWReporting>)aReporter probeTimeout:(NSTimeInterval)probeTimeout shouldWait:(BOOL)shouldWait {
-    KWAsyncVerifier *verifier = [[self alloc] initWithExpectationType:anExpectationType callSite:aCallSite matcherFactory:aMatcherFactory reporter:aReporter];
++ (id)asyncVerifierWithExpectationType:(KWExpectationType)anExpectationType
+                              callSite:(KWCallSite *)aCallSite
+                        matcherFactory:(KWMatcherFactory *)aMatcherFactory
+                              reporter:(id<KWReporting>)aReporter
+                          probeTimeout:(NSTimeInterval)probeTimeout
+                            shouldWait:(BOOL)shouldWait {
+    KWAsyncVerifier *verifier = [[self alloc] initWithExpectationType:anExpectationType
+                                                             callSite:aCallSite
+                                                       matcherFactory:aMatcherFactory
+                                                             reporter:aReporter];
     verifier.timeout = probeTimeout;
     verifier.shouldWait = shouldWait;
     return verifier;
 }
 
-- (id)initWithExpectationType:(KWExpectationType)anExpectationType callSite:(KWCallSite *)aCallSite matcherFactory:(KWMatcherFactory *)aMatcherFactory reporter:(id<KWReporting>)aReporter {
-    self = [super initWithExpectationType:anExpectationType callSite:aCallSite matcherFactory:aMatcherFactory reporter:aReporter];
+- (id)initWithExpectationType:(KWExpectationType)anExpectationType
+                     callSite:(KWCallSite *)aCallSite
+               matcherFactory:(KWMatcherFactory *)aMatcherFactory
+                     reporter:(id<KWReporting>)aReporter {
+    self = [super initWithExpectationType:anExpectationType
+                                 callSite:aCallSite
+                           matcherFactory:aMatcherFactory
+                                 reporter:aReporter];
     if (self) {
         self.timeout = kKW_DEFAULT_PROBE_TIMEOUT;
     }
@@ -31,26 +45,31 @@
 
 - (void)verifyWithProbe:(KWAsyncMatcherProbe *)aProbe {
     @try {
-        KWProbePoller *poller = [[KWProbePoller alloc] initWithTimeout:self.timeout delay:kKW_DEFAULT_PROBE_DELAY shouldWait: self.shouldWait];
+        KWProbePoller *poller = [[KWProbePoller alloc] initWithTimeout:self.timeout
+                                                                 delay:kKW_DEFAULT_PROBE_DELAY
+                                                            shouldWait:self.shouldWait];
         
         if (![poller check:aProbe]) {
             if (self.expectationType == KWExpectationTypeShould) {
                 NSString *message = [aProbe.matcher failureMessageForShould];
-                KWFailure *failure = [KWFailure failureWithCallSite:self.callSite message:message];
+                KWFailure *failure = [KWFailure failureWithCallSite:self.callSite
+                                                            message:message];
                 [self.reporter reportFailure:failure];
             }
         } else {
             // poller returned YES -- fail if expectation is NOT
             if (self.expectationType == KWExpectationTypeShouldNot) {
                 NSString *message = [aProbe.matcher failureMessageForShouldNot];
-                KWFailure *failure = [KWFailure failureWithCallSite:self.callSite message:message];
+                KWFailure *failure = [KWFailure failureWithCallSite:self.callSite
+                                                            message:message];
                 [self.reporter reportFailure:failure];
             }
         }
 		
         
     } @catch (NSException *exception) {
-        KWFailure *failure = [KWFailure failureWithCallSite:self.callSite message:[exception description]];
+        KWFailure *failure = [KWFailure failureWithCallSite:self.callSite
+                                                    message:[exception description]];
         [self.reporter reportFailure:failure];
     }
 }

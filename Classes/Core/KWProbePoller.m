@@ -7,6 +7,7 @@
 //
 
 #import "KWProbePoller.h"
+#import <CoreFoundation/CoreFoundation.h>
 
 @interface KWTimeout : NSObject
 
@@ -19,9 +20,11 @@
 - (id)initWithTimeout:(NSTimeInterval)timeout
 {
     self = [super init];
+    
     if (self) {
-        _timeoutDate = [[NSDate alloc] initWithTimeIntervalSinceNow:timeout];
+        _timeoutDate = [NSDate dateWithTimeIntervalSinceNow:timeout];
     }
+    
     return self;
 }
 
@@ -55,15 +58,37 @@
     return self;
 }
 
-- (BOOL)check:(id<KWProbe>)probe; {
-    KWTimeout *timeout = [[KWTimeout alloc] initWithTimeout:self.timeoutInterval];
+- (BOOL)check:(id<KWProbe>)probe {
+    __block BOOL probeIsSatisfied = NO;
+    NSRunLoop *currentRunLoop = [NSRunLoop currentRunLoop];
+    NSTimer *timer = [NSTimer scheduledTimerWithTimeInterval:0.1
+                                                      target:probe
+                                                    selector:@selector(sample)
+                                                    userInfo:nil
+                                                     repeats:YES];
+    CFRunLoopObserverRef probeIsSatisfiedObserver =
+    CFRunLoopObserverCreateWithHandler(kCFAllocatorDefault,
+                                       kCFRunLoopAllActivities,
+                                       true,
+                                       0,
+                                       ^(CFRunLoopObserverRef observer,
+                                         CFRunLoopActivity activity) {
+                                            if ([probe isSatisfied]) {
+                                                probeIsSatisfied = YES;
+                                            };
+                                        });
+    CFRunLoopAddObserver([currentRunLoop getCFRunLoop],
+                         probeIsSatisfiedObserver,
+                         kCFRunLoopDefaultMode);
+    [currentRunLoop addTimer:timer
+                     forMode:NSDefaultRunLoopMode];
     
-    while (self.shouldWait || ![probe isSatisfied]) {
+    KWTimeout *timeout = [[KWTimeout alloc] initWithTimeout:self.timeoutInterval];
+    while ((self.shouldWait || probeIsSatisfied) && [currentRunLoop runMode:NSDefaultRunLoopMode
+                                             beforeDate:[NSDate dateWithTimeIntervalSinceNow:self.timeoutInterval]]) {
         if ([timeout hasTimedOut]) {
             return [probe isSatisfied];
         }
-        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:self.delayInterval]];
-        [probe sample];
     }
     
     return YES;
